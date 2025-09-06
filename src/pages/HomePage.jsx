@@ -61,7 +61,7 @@ const HomePage = () => {
               <h1 className="text-2xl font-bold">Sayur YuNur</h1>
             </div>
             <p className="text-green-100 text-sm">
-              Sayur segar langsung dari petani lokal
+              Pesan Sayur Sekarang, Langsung Kami Antar
             </p>
           </div>
 
