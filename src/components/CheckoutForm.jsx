@@ -108,8 +108,8 @@ const CheckoutForm = ({ selectedItems, total, onClose }) => {
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // Cache lokasi selama 5 menit
+        timeout: 20000,
+        maximumAge: 3600000 // Cache lokasi selama 5 menit
       }
     );
   };
