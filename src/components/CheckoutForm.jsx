@@ -197,7 +197,7 @@ const CheckoutForm = ({ selectedItems, total, onClose }) => {
     if (distanceKm < 1) return 'Dekat';
     if (distanceKm >= 1 && distanceKm <= 3) return 'Sedang';
     if (distanceKm > 3 && distanceKm <= 5) return 'Jauh';
-    return 'Luar Kota';
+    return 'Sangat Jauh';
   };
 
   return (
@@ -217,7 +217,7 @@ const CheckoutForm = ({ selectedItems, total, onClose }) => {
         </div>
         
         {/* Form */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24">
           {/* Nama */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">

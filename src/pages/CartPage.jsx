@@ -153,7 +153,7 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
       </div>
 
       {/* Cart Items */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 pb-16">
         {cart.map(item => (
           <CartItem key={item.id} item={item} />
         ))}
@@ -206,3 +206,4 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
 };
 
 export default CartPage;
+
