@@ -194,9 +194,9 @@ const CheckoutForm = ({ selectedItems, total, onClose }) => {
   };
 
   const getShippingLabel = (distanceKm) => {
-    if (distanceKm < 1) return 'Sangat Dekat';
-    if (distanceKm >= 1 && distanceKm <= 3) return 'Dalam Kota';
-    if (distanceKm > 3 && distanceKm <= 5) return 'Pinggiran Kota';
+    if (distanceKm < 1) return 'Dekat';
+    if (distanceKm >= 1 && distanceKm <= 3) return 'Sedang';
+    if (distanceKm > 3 && distanceKm <= 5) return 'Jauh';
     return 'Luar Kota';
   };
 
