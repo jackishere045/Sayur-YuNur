@@ -104,7 +104,7 @@ const InstallButton = () => {
         
         📱 Android Chrome:
         • Tap menu ⋮ (3 titik)
-        • Pilih "Install app" atau "Add to Home screen"
+        • Pilih "Install app" atau "Tambahkan ke layar utama"
         
         🍎 iPhone Safari:
         • Tap tombol Share 📤
