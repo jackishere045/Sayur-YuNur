@@ -694,10 +694,30 @@ const AdminPage = ({ user, onLogout }) => {
                     type="text"
                     placeholder="Ketik atau pilih kategori"
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    list="category-suggestions"
+                    onChange={(e) => {
+                      setFormData({ ...formData, category: e.target.value });
+                    }}
+                    list="category-suggestions" // Gunakan datalist untuk saran
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                    placeholder="5000"
                     required
+                    min="1"
+                    disabled={uploading}
+                  />
+                </div>
+                {/* Price */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Harga *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm md:text-base"
+                    placeholder="5000"
+                    required
+                    min="1"
                     disabled={uploading}
                   />
                 </div>
@@ -778,4 +798,4 @@ const AdminPage = ({ user, onLogout }) => {
   );
 };
 
-export default AdminPage;
+export default AdminPage; 
