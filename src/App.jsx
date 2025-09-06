@@ -10,6 +10,7 @@ import { CartProvider } from './context/CartContext';
 // Components
 import BottomNavigation from './components/BottomNavigation';
 import AdminLogin from './components/AdminLogin';
+import InstallButton from './components/InstallButton';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -277,6 +278,7 @@ export const AppWithRouter = () => {
       <CartProvider>
         <Router>
           <div className="min-h-screen bg-gray-50">
+            <InstallButton/>
             {/* Offline Banner */}
             {!isOnline && (
               <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-white text-center py-2 px-4 z-40">
