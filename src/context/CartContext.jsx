@@ -8,28 +8,31 @@ const CartContext = createContext();
 const cartReducer = (state, action) => {
   switch (action.type) {
     case 'ADD_ITEM': {
-      const existingItem = state.find(item => item.id === action.payload.id);
-      if (existingItem) {
-        return state.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...state, { ...action.payload, quantity: 1, selected: true }];
+    const existingItem = state.find((item) => item.id === action.payload.id);
+    if (existingItem) {
+      // Jangan tambah jika quantity sudah mencapai stok
+      const newQty = Math.min(existingItem.quantity + 1, existingItem.stock);
+      return state.map((item) =>
+        item.id === action.payload.id
+          ? { ...item, quantity: newQty }
+          : item
+      );
     }
+    // tambah item baru, set quantity = 1 tapi maksimal stok
+    return [...state, { ...action.payload, quantity: Math.min(1, action.payload.stock), selected: true }];
+}
 
     case 'REMOVE_ITEM':
       return state.filter(item => item.id !== action.payload);
 
     case 'UPDATE_QUANTITY':
-      return state
-        .map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: Math.max(0, action.payload.quantity) }
-            : item
-        )
-        .filter(item => item.quantity > 0);
+    return state
+      .map((item) =>
+        item.id === action.payload.id
+          ? { ...item, quantity: Math.min(action.payload.quantity, item.stock) } // batas stok
+          : item
+      )
+      .filter(item => item.quantity > 0);
 
     case 'TOGGLE_SELECT':
       return state.map(item =>

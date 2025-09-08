@@ -1,11 +1,13 @@
 // src/pages/OrdersPage.jsx
 import React, { useState, useEffect } from 'react';
-import { Package, Calendar, Phone, MapPin, Trash2 } from 'lucide-react'; // Tambahkan Trash2
+import { Package, Calendar, Phone, MapPin, Trash2, MessageCircle } from 'lucide-react';
+import FeedbackModal from '../components/FeedbackModal'; // import FeedbackModal
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false); // state modal feedback
 
   // Load orders dari localStorage
   useEffect(() => {
@@ -199,15 +201,29 @@ const OrdersPage = () => {
             <div className="w-32 h-1 bg-green-200 rounded-full mx-auto"></div>
           </div>
         ) : (
-          <div>
-            {orders.map(order => <OrderCard key={order.id} order={order} />)}
-          </div>
+          <div>{orders.map(order => <OrderCard key={order.id} order={order} />)}</div>
         )}
       </div>
 
+      {/* Modal detail order */}
       {selectedOrder && (
         <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
       )}
+
+      {/* Tombol Feedback Floating */}
+      <button
+        onClick={() => setIsFeedbackOpen(true)}
+        className="fixed bottom-20 right-5 bg-green-600 text-white p-4 rounded-full shadow-lg hover:bg-green-700 transition flex items-center justify-center"
+        title="Kirim Feedback"
+      >
+        <MessageCircle size={24} />
+      </button>
+
+      {/* Modal feedback */}
+      <FeedbackModal
+        isOpen={isFeedbackOpen}
+        onClose={() => setIsFeedbackOpen(false)}
+      />
     </div>
   );
 };

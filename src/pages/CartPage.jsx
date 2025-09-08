@@ -1,17 +1,37 @@
 // src/pages/CartPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShoppingCart, CheckSquare, Square } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import CartItem from '../components/CartItem';
 import CheckoutForm from '../components/CheckoutForm';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const CartPage = () => {
   const { cart, dispatch } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
+  const [products, setProducts] = useState([]);
+
+  // Ambil data produk dari Firestore untuk mendapatkan stok terkini
+  useEffect(() => {
+    const productsCollectionRef = collection(db, 'products');
+    
+    const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
+      const productsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProducts(productsData);
+    }, (error) => {
+      console.error("Error fetching products from Firestore:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Filter item yang dipilih
   const selectedItems = cart.filter(item => item.selected);
-  
+
   // Hitung total harga item yang dipilih
   const total = selectedItems.reduce((sum, item) => {
     return sum + (item.price * item.quantity);
@@ -21,21 +41,73 @@ const CartPage = () => {
   const toggleSelectAll = () => {
     const allSelected = cart.every(item => item.selected);
     cart.forEach(item => {
-      dispatch({ 
-        type: 'TOGGLE_SELECT', 
-        payload: item.id 
-      });
+      dispatch({ type: 'TOGGLE_SELECT', payload: item.id });
     });
   };
+
+  // Dapatkan stok produk berdasarkan ID
+  const getProductStock = (productId) => {
+    const product = products.find(p => p.id === productId);
+    return product ? product.stock : 0;
+  };
+
+  // Validasi quantity dengan stok
+  const validateCartQuantities = () => {
+    cart.forEach(item => {
+      const availableStock = getProductStock(item.id);
+      if (item.quantity > availableStock) {
+        // Jika quantity di cart melebihi stok, sesuaikan dengan stok yang tersedia
+        dispatch({
+          type: 'UPDATE_QUANTITY',
+          payload: { id: item.id, quantity: Math.max(0, availableStock) }
+        });
+      }
+    });
+  };
+
+  // Jalankan validasi setiap kali products berubah
+  useEffect(() => {
+    if (products.length > 0) {
+      validateCartQuantities();
+    }
+  }, [products]);
 
   // Handle checkout
   const handleCheckout = async (formData) => {
     try {
+      // Validasi ulang stok sebelum checkout
+      let hasStockIssue = false;
+      const updatedItems = [];
+
+      for (const item of selectedItems) {
+        const availableStock = getProductStock(item.id);
+        if (item.quantity > availableStock) {
+          hasStockIssue = true;
+          if (availableStock > 0) {
+            // Update quantity ke stok yang tersedia
+            dispatch({
+              type: 'UPDATE_QUANTITY',
+              payload: { id: item.id, quantity: availableStock }
+            });
+            updatedItems.push(`${item.name}: quantity disesuaikan menjadi ${availableStock}`);
+          } else {
+            // Hapus item jika stok habis
+            dispatch({ type: 'REMOVE_FROM_CART', payload: item.id });
+            updatedItems.push(`${item.name}: dihapus karena stok habis`);
+          }
+        }
+      }
+
+      if (hasStockIssue) {
+        alert(`Stok beberapa produk telah berubah:\n\n${updatedItems.join('\n')}\n\nSilakan periksa kembali pesanan Anda.`);
+        return;
+      }
+
       // Buat pesan WhatsApp
       const itemsList = selectedItems.map(item => 
         `â€¢ ${item.name} x${item.quantity} = Rp ${(item.price * item.quantity).toLocaleString('id-ID')}`
       ).join('\n');
-      
+
       const message = `*PESANAN SAYUR YUNUR*
 
 *Data Pembeli:*
@@ -52,10 +124,10 @@ Ongkir: Rp ${formData.shipping.toLocaleString('id-ID')}
 *TOTAL: Rp ${(total + formData.shipping).toLocaleString('id-ID')}*
 
 ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ™`;
-      
+
       // Encode pesan untuk URL WhatsApp
       const whatsappUrl = `https://wa.me/6287833415425?text=${encodeURIComponent(message)}`;
-      
+
       // TODO: Simpan pesanan ke Firebase
       const order = {
         id: Date.now(),
@@ -72,21 +144,21 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
         status: 'Menunggu',
         createdAt: new Date().toISOString()
       };
-      
+
       console.log('Order to be saved:', order);
-      
+
       // Hapus item yang sudah di-checkout dari keranjang
       dispatch({ type: 'CLEAR_SELECTED' });
-      
+
       // Buka WhatsApp
       window.open(whatsappUrl, '_blank');
-      
+
       // Tutup form checkout
       setShowCheckout(false);
-      
+
       // Tampilkan pesan sukses
       alert('Pesanan berhasil! Anda akan diarahkan ke WhatsApp.');
-      
+
     } catch (error) {
       console.error('Error during checkout:', error);
       throw error; // Re-throw untuk ditangani oleh CheckoutForm
@@ -100,7 +172,7 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
         <div className="bg-green-600 text-white p-4">
           <h1 className="text-xl font-semibold">Keranjang Belanja</h1>
         </div>
-        
+
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="bg-gray-100 rounded-full p-8 mb-6">
             <ShoppingCart size={64} className="text-gray-400" />
@@ -109,8 +181,7 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
             Keranjang Masih Kosong
           </h2>
           <p className="text-gray-500 text-center mb-6">
-            Belum ada produk yang ditambahkan ke keranjang. 
-            Mulai berbelanja sekarang!
+            Belum ada produk yang ditambahkan ke keranjang. Mulai berbelanja sekarang!
           </p>
           <div className="w-32 h-1 bg-green-200 rounded-full"></div>
         </div>
@@ -131,7 +202,7 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
           </span>
         </div>
       </div>
-      
+
       {/* Select All */}
       <div className="bg-white border-b p-4">
         <button
@@ -154,9 +225,16 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
 
       {/* Cart Items */}
       <div className="p-4 space-y-3 pb-16">
-        {cart.map(item => (
-          <CartItem key={item.id} item={item} />
-        ))}
+        {cart.map(item => {
+          const availableStock = getProductStock(item.id);
+          return (
+            <CartItem 
+              key={item.id} 
+              item={item} 
+              availableStock={availableStock}
+            />
+          );
+        })}
       </div>
 
       {/* Checkout Bottom Sheet */}
@@ -173,7 +251,7 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
                   Rp {total.toLocaleString('id-ID')}
                 </p>
               </div>
-              
+
               {/* Checkout Button */}
               <button
                 onClick={() => setShowCheckout(true)}
@@ -182,7 +260,7 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
                 Checkout
               </button>
             </div>
-            
+
             {/* Selected Items Preview */}
             <div className="text-xs text-gray-500">
               {selectedItems.slice(0, 3).map(item => item.name).join(', ')}
@@ -206,4 +284,3 @@ ${formData.notes ? `ğŸ“ *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ğŸ
 };
 
 export default CartPage;
-

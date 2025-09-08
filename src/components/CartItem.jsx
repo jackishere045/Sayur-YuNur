@@ -10,9 +10,8 @@ const CartItem = ({ item }) => {
   // Update quantity item
   const updateQuantity = (newQuantity) => {
     if (newQuantity <= 0) {
-      // Jika quantity jadi 0 atau kurang, hapus item
       dispatch({ type: 'REMOVE_ITEM', payload: item.id });
-    } else {
+    } else if (newQuantity <= item.stock) {
       dispatch({ 
         type: 'UPDATE_QUANTITY', 
         payload: { id: item.id, quantity: newQuantity } 
@@ -20,25 +19,21 @@ const CartItem = ({ item }) => {
     }
   };
 
-  // Toggle checkbox select/unselect
   const toggleSelect = () => {
     dispatch({ type: 'TOGGLE_SELECT', payload: item.id });
   };
 
-  // Hapus item dari keranjang
   const removeItem = () => {
     dispatch({ type: 'REMOVE_ITEM', payload: item.id });
   };
 
-  // Handle error gambar
-  const handleImageError = () => {
-    setImageError(true);
-  };
+  const handleImageError = () => setImageError(true);
+
+  const isMax = item.quantity >= item.stock;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 mb-3">
       <div className="flex items-start gap-3">
-        {/* Checkbox untuk select item */}
         <div className="mt-1">
           <input
             type="checkbox"
@@ -48,7 +43,6 @@ const CartItem = ({ item }) => {
           />
         </div>
 
-        {/* Gambar Produk */}
         <div className="flex-shrink-0">
           {!imageError ? (
             <img 
@@ -64,9 +58,7 @@ const CartItem = ({ item }) => {
           )}
         </div>
 
-        {/* Info Produk */}
         <div className="flex-1 min-w-0">
-          {/* Nama dan Harga */}
           <div className="mb-2">
             <h3 className="font-semibold text-gray-800 truncate">
               {item.name}
@@ -76,30 +68,30 @@ const CartItem = ({ item }) => {
             </p>
           </div>
 
-          {/* Kontrol Quantity dan Hapus */}
           <div className="flex items-center justify-between">
-            {/* Quantity Controls */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => updateQuantity(item.quantity - 1)}
-                className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-700 flex items-center justify-center transition-colors"
               >
-                <Minus size={16} className="text-gray-600" />
+                <Minus size={16} className="text-white" />
               </button>
-              
-              <span className="w-8 text-center font-medium">
-                {item.quantity}
-              </span>
-              
+
+              <div className="flex flex-col items-center">
+                <span className="w-8 text-center font-medium">{item.quantity}</span>
+                {isMax && <span className="text-xs text-red-500">Maksimal Stok</span>}
+              </div>
+
               <button
                 onClick={() => updateQuantity(item.quantity + 1)}
-                className="w-8 h-8 rounded-full bg-green-600 hover:bg-green-700 flex items-center justify-center transition-colors"
+                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors
+                  ${isMax ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+                disabled={isMax}
               >
-                <Plus size={16} className="text-white" />
+                <Plus size={16} className={isMax ? 'text-gray-500' : 'text-white'} />
               </button>
             </div>
 
-            {/* Tombol Hapus */}
             <button
               onClick={removeItem}
               className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
@@ -109,7 +101,6 @@ const CartItem = ({ item }) => {
             </button>
           </div>
 
-          {/* Subtotal per item */}
           <div className="mt-2 text-right">
             <span className="text-sm text-gray-500">Subtotal: </span>
             <span className="font-semibold text-gray-800">
