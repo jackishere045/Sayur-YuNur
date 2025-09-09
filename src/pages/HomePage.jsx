@@ -1,39 +1,43 @@
 // src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
-import { Search, Leaf } from 'lucide-react';
+import { Search, Leaf, Clock, AlertCircle } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import CategoryFilter from '../components/CategoryFilter';
+import StoreClosedBanner from '../components/StoreClosedBanner';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useStoreStatus} from '../hooks/useStoreStatus';
 
 const HomePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Store status hook
+  const { isStoreOpen, nextOpenTime, loading: storeLoading } = useStoreStatus();
 
   // ambil produk dari Firestore
   useEffect(() => {
-  setLoading(true);
-  const productsCollectionRef = collection(db, 'products');
+    setLoading(true);
+    const productsCollectionRef = collection(db, 'products');
 
-  // Listener realtime
-  const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
-    const productsData = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    setProducts(productsData);
-    setLoading(false);
-  }, (error) => {
-    console.error("Error fetching products from Firestore:", error);
-    setLoading(false);
-  });
+    // Listener realtime
+    const unsubscribe = onSnapshot(productsCollectionRef, (snapshot) => {
+      const productsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setProducts(productsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching products from Firestore:", error);
+      setLoading(false);
+    });
 
-  // cleanup listener saat unmount
-  return () => unsubscribe();
-}, []);
-
+    // cleanup listener saat unmount
+    return () => unsubscribe();
+  }, []);
 
   // ambil daftar kategori unik dari Firestore
   const categories = [...new Set(products.map(p => p.category))];
@@ -63,6 +67,18 @@ const HomePage = () => {
             <p className="text-green-100 text-sm">
               Pesan Sayur Sekarang, Langsung Kami Antar
             </p>
+            
+            {/* Store Status Indicator */}
+            {!storeLoading && (
+              <div className={`inline-flex items-center gap-2 mt-3 px-3 py-1 rounded-full text-xs font-medium ${
+                isStoreOpen 
+                  ? 'bg-green-700 bg-opacity-50 text-green-100'
+                  : 'bg-red-500 bg-opacity-80 text-red-100'
+              }`}>
+                <Clock size={14} />
+                <span>{isStoreOpen ? 'BUKA' : 'TUTUP'}</span>
+              </div>
+            )}
           </div>
 
           {/* Search Bar */}
@@ -90,8 +106,12 @@ const HomePage = () => {
               <div className="text-xs text-green-100">Tersedia</div>
             </div>
             <div className="flex-1 bg-white bg-opacity-20 rounded-lg p-3">
-              <div className="text-xl font-bold">Fresh</div>
-              <div className="text-xs text-green-100">Hari Ini</div>
+              <div className={`text-xl font-bold ${isStoreOpen ? 'text-green-100' : 'text-red-200'}`}>
+                {isStoreOpen ? 'Fresh' : 'Tutup'}
+              </div>
+              <div className="text-xs text-green-100">
+                {isStoreOpen ? 'Hari Ini' : 'Sementara'}
+              </div>
             </div>
           </div>
         </div>
@@ -99,6 +119,11 @@ const HomePage = () => {
 
       {/* Content */}
       <div className="px-4 py-6">
+        {/* Store Closed Banner */}
+        {!storeLoading && !isStoreOpen && (
+          <StoreClosedBanner nextOpenTime={nextOpenTime} />
+        )}
+
         {/* Category Filter */}
         <CategoryFilter
           categories={categories}
@@ -139,7 +164,11 @@ const HomePage = () => {
             {filteredProducts.length > 0 ? (
               <div className="grid grid-cols-2 gap-4">
                 {filteredProducts.map(product => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard 
+                    key={product.id} 
+                    product={product} 
+                    disabled={!isStoreOpen} // Pass store status to ProductCard
+                  />
                 ))}
               </div>
             ) : (
@@ -161,6 +190,12 @@ const HomePage = () => {
         {!loading && filteredProducts.length > 0 && (
           <div className="text-center mt-8 text-sm text-gray-500">
             Menampilkan {filteredProducts.length} dari {totalProducts} produk
+            {!isStoreOpen && (
+              <div className="mt-2 text-red-600 flex items-center justify-center gap-1">
+                <AlertCircle size={14} />
+                <span className="text-xs">Toko tutup - tidak dapat memesan</span>
+              </div>
+            )}
           </div>
         )}
       </div>

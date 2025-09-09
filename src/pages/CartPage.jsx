@@ -1,16 +1,21 @@
 // src/pages/CartPage.jsx
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, CheckSquare, Square } from 'lucide-react';
+import { ShoppingCart, CheckSquare, Square, AlertCircle } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import CartItem from '../components/CartItem';
 import CheckoutForm from '../components/CheckoutForm';
+import StoreClosedBanner from '../components/StoreClosedBanner';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useStoreStatus} from '../hooks/useStoreStatus';
 
 const CartPage = () => {
   const { cart, dispatch } = useCart();
   const [showCheckout, setShowCheckout] = useState(false);
   const [products, setProducts] = useState([]);
+  
+  // Store status hook
+  const { isStoreOpen, nextOpenTime, loading: storeLoading } = useStoreStatus();
 
   // Ambil data produk dari Firestore untuk mendapatkan stok terkini
   useEffect(() => {
@@ -39,6 +44,8 @@ const CartPage = () => {
 
   // Select/Unselect semua item
   const toggleSelectAll = () => {
+    if (!isStoreOpen) return; // Prevent selection when store is closed
+    
     const allSelected = cart.every(item => item.selected);
     cart.forEach(item => {
       dispatch({ type: 'TOGGLE_SELECT', payload: item.id });
@@ -75,6 +82,12 @@ const CartPage = () => {
   // Handle checkout
   const handleCheckout = async (formData) => {
     try {
+      // Cek dulu apakah toko buka
+      if (!isStoreOpen) {
+        alert('Maaf, toko sedang tutup. Tidak dapat melakukan pemesanan saat ini.');
+        return;
+      }
+
       // Validasi ulang stok sebelum checkout
       let hasStockIssue = false;
       const updatedItems = [];
@@ -173,6 +186,13 @@ ${formData.notes ? `üìù *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ü
           <h1 className="text-xl font-semibold">Keranjang Belanja</h1>
         </div>
 
+        {/* Store Status Banner - ketika cart kosong */}
+        {!storeLoading && !isStoreOpen && (
+          <div className="p-4">
+            <StoreClosedBanner nextOpenTime={nextOpenTime} />
+          </div>
+        )}
+
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="bg-gray-100 rounded-full p-8 mb-6">
             <ShoppingCart size={64} className="text-gray-400" />
@@ -203,24 +223,45 @@ ${formData.notes ? `üìù *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ü
         </div>
       </div>
 
+      {/* Store Status Banner - ketika ada item di cart */}
+      {!storeLoading && !isStoreOpen && (
+        <div className="p-4">
+          <StoreClosedBanner nextOpenTime={nextOpenTime} />
+        </div>
+      )}
+
       {/* Select All */}
       <div className="bg-white border-b p-4">
         <button
           onClick={toggleSelectAll}
           className="flex items-center gap-3 w-full"
+          disabled={!isStoreOpen}
         >
           {allSelected ? (
-            <CheckSquare size={20} className="text-green-600" />
+            <CheckSquare 
+              size={20} 
+              className={isStoreOpen ? "text-green-600" : "text-gray-400"} 
+            />
           ) : (
-            <Square size={20} className="text-gray-400" />
+            <Square 
+              size={20} 
+              className={isStoreOpen ? "text-gray-400" : "text-gray-300"} 
+            />
           )}
-          <span className="font-medium">
+          <span className={`font-medium ${!isStoreOpen ? 'text-gray-400' : ''}`}>
             {allSelected ? 'Batalkan Pilih Semua' : 'Pilih Semua'}
           </span>
           <span className="text-sm text-gray-500 ml-auto">
             {selectedItems.length}/{cart.length} dipilih
           </span>
         </button>
+        
+        {!isStoreOpen && (
+          <div className="flex items-center gap-2 mt-2 text-sm text-red-600">
+            <AlertCircle size={16} />
+            <span>Pemilihan item dinonaktifkan saat toko tutup</span>
+          </div>
+        )}
       </div>
 
       {/* Cart Items */}
@@ -232,6 +273,7 @@ ${formData.notes ? `üìù *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ü
               key={item.id} 
               item={item} 
               availableStock={availableStock}
+              disabled={!isStoreOpen} // Pass store status
             />
           );
         })}
@@ -255,11 +297,26 @@ ${formData.notes ? `üìù *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ü
               {/* Checkout Button */}
               <button
                 onClick={() => setShowCheckout(true)}
-                className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md"
+                disabled={!isStoreOpen}
+                className={`px-6 py-3 rounded-lg font-semibold transition-colors shadow-md ${
+                  isStoreOpen 
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
-                Checkout
+                {isStoreOpen ? 'Checkout' : 'Toko Tutup'}
               </button>
             </div>
+
+            {/* Store Status Warning */}
+            {!isStoreOpen && (
+              <div className="mb-3 p-2 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center gap-2 text-sm text-red-700">
+                  <AlertCircle size={16} />
+                  <span>Checkout dinonaktifkan saat toko tutup</span>
+                </div>
+              </div>
+            )}
 
             {/* Selected Items Preview */}
             <div className="text-xs text-gray-500">
@@ -270,8 +327,8 @@ ${formData.notes ? `üìù *Catatan:*\n${formData.notes}\n\n` : ''}Terima kasih ü
         </div>
       )}
 
-      {/* Checkout Form Modal */}
-      {showCheckout && (
+      {/* Checkout Form Modal - only show when store is open */}
+      {showCheckout && isStoreOpen && (
         <CheckoutForm
           selectedItems={selectedItems}
           total={total}
